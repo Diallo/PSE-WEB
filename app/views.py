@@ -72,7 +72,7 @@ def index_js():
 
 @app.route("/login")
 def login():
-    return spotifysso.authorize(callback=f"http://{app.config['HOST']}/callback")
+    return spotifysso.authorize(callback=f"https://{app.config['HOST']}/callback")
 
 
 @app.route('/callback')
