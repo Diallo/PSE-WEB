@@ -53,7 +53,6 @@ class User(db.Model):
                         email=json_info['email'],
                         display_name=json_info['display_name'],
                         image_url=None,
-                        birthdate=datetime.datetime.strptime(json_info['birthdate'], "%Y-%m-%d"),
                         country=json_info['country'],
                         is_premium=(json_info['product'] == "premium"),
                         refresh_token=refresh_token,
