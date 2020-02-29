@@ -1,54 +1,73 @@
-from flask import Flask, send_from_directory, jsonify, json, render_template, redirect, request, session, flash, url_for
+"""
+    views.py
+    ~~~~~~~~~~~~
+    This file contains the flask views that route URL's to functions. Primary functionality is the authentication of
+    users.
+
+    :copyright: 2019 Moodify (High-Mood)
+    :authors:
+           "Stan van den Broek",
+           "Mitchell van den Bulk",
+           "Mo Diallo",
+           "Arthur van Eeden",
+           "Elijah Erven",
+           "Henok Ghebrenigus",
+           "Jonas van der Ham",
+           "Mounir El Kirafi",
+           "Esmeralda Knaap",
+           "Youri Reijne",
+           "Siwa Sardjoemissier",
+           "Barry de Vries",
+           "Jelle Witsen Elias"
+"""
+
+import os
+
+from flask import send_from_directory, render_template, redirect, request, session, flash, url_for
+
 from app import app
-# Refactor later
 from app import spotifysso
-from app.utils import influx, spotify
-from app.utils.tasks import update_user_tracks
-from app.utils.models import User
 from app.API.track_calls import TopSongs
+from app.utils import influx, spotify
+from app.utils.models import User, Song
+from app.utils.tasks import update_user_tracks
+
+
+@app.route('/favicon.ico')
+def favicon():
+    return send_from_directory(os.path.join(app.root_path, 'static'),
+                               'favicon.ico', mimetype='image/vnd.microsoft.icon')
 
 
 @app.route("/index", methods=['GET', 'POST'])
 @app.route("/", methods=['GET', 'POST'])
 def index():
     if "json_info" not in session:
-        return render_template("login.html", **locals())
+        return render_template("index.html", **locals())
     else:
 
         client = influx.create_client(app.config['INFLUX_HOST'], app.config['INFLUX_PORT'])
         userid = session['json_info']['id']
         access_token = spotify.get_access_token(session['json_info']['refresh_token'])
-        all_songs = set(influx.get_songs(client, userid)[1])
+        all_songs = set([Song.get_song_name(song['songid']) for song in influx.get_songs(client, userid)])
 
-        return render_template("index.html", **locals(), text=session['json_info']['display_name'],
+        return render_template("dashboard.html", **locals(), text=session['json_info']['display_name'],
                                id=session['json_info']['id'], song_history=all_songs)
+
+
+@app.route("/dashboard")
+def dashboard():
+    return render_template("dashboard.html")
 
 
 @app.route("/index_js")
 def index_js():
-    client = influx.create_client(app.config['INFLUX_HOST'], app.config['INFLUX_PORT'])
     userid = session['json_info']['id']
-
-    top_songs = influx.get_top_songs(client, userid, 10)
-    timestamps, duration = influx.total_time_spent(client, userid)
-    top_genres = influx.get_top_genres(client, userid, 10)
-
-    # TODO these variables are not getting used.
-    songs, song_count = [], []
-    genres, genre_count = [], []
-    if top_songs:
-        songs, song_count = [list(x) for x in list(zip(*top_songs))]
-
-    if top_genres:
-        genres, genre_count = [list(x) for x in list(zip(*top_genres))]
-
     songs = TopSongs().get(userid, 10)['resource']['songs']
-    print(songs)
     song_count = 10
 
-    return render_template("index.js", songs=songs, song_count=song_count,
-                           genres=genres, genre_count=genre_count,
-                           timestamps=timestamps, duration=duration)
+    return render_template("index.js", songs=songs, song_count=song_count, genres=[], genre_count=[], timestamps=[],
+                           duration=[])
 
 
 @app.route("/login")
@@ -72,12 +91,11 @@ def authorized():
 
     access_token = resp['access_token']
     refresh_token = resp['refresh_token']
-    # TODO dynamic scopes
     scopes = resp['scope'].split(" ")
 
     json_user_info = spotify.get_user_info(access_token)
-    User.create_if_not_exist(json_user_info, refresh_token)  # TODO Add access token
-    session['json_info'] = json_user_info  # TODO change this laziness
+    User.create_if_not_exist(json_user_info, refresh_token)
+    session['json_info'] = json_user_info
     session['json_info']['refresh_token'] = refresh_token
 
     update_user_tracks(access_token)

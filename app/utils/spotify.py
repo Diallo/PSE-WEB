@@ -1,7 +1,31 @@
+"""
+    spotify.py
+    ~~~~~~~~~~~~
+    This file contains functions that communicate with the Spotify API.
+
+    :copyright: 2019 Moodify (High-Mood)
+    :authors:
+           "Stan van den Broek",
+           "Mitchell van den Bulk",
+           "Mo Diallo",
+           "Arthur van Eeden",
+           "Elijah Erven",
+           "Henok Ghebrenigus",
+           "Jonas van der Ham",
+           "Mounir El Kirafi",
+           "Esmeralda Knaap",
+           "Youri Reijne",
+           "Siwa Sardjoemissier",
+           "Barry de Vries",
+           "Jelle Witsen Elias"
+"""
+
 import requests
 from requests.auth import HTTPBasicAuth
-from config import SPOTIFY_CLIENT, SPOTIFY_SECRET
+
 from app.utils.exceptions import StatusCodeError
+from app.utils.models import User
+from config import SPOTIFY_CLIENT, SPOTIFY_SECRET
 
 
 def get_artists(access_token, artistids):
@@ -64,7 +88,7 @@ def get_recommendations(access_token, recommendation_count, track_string, param_
                          selected track attribute’s value can be provided.
     :return: A response body contains a recommendations response object in JSON format.
     """
-    url = "https://api.spotify.com/v1/recommendations?limit=" +\
+    url = "https://api.spotify.com/v1/recommendations?limit=" + \
           f"{recommendation_count}&seed_tracks={track_string}{param_string}"
 
     return _get_basic_request(access_token, url)
@@ -101,3 +125,27 @@ def get_access_token(refresh_token):
         raise StatusCodeError(response)
 
     return response.json()["access_token"]
+
+
+def get_playlists(userid, url=None, output=[]):
+    access_token = get_access_token(User.get_refresh_token(userid))
+    if not url:
+        url = "https://api.spotify.com/v1/me/playlists"
+    headers = {'Authorization': "Bearer {}".format(access_token)}
+    response = requests.get(url, headers=headers)
+
+    json_data = response.json()
+
+    for item in json_data["items"]:
+        resp = {"name": item['name'],
+                "id": item['id'],
+                'href': item['href'],
+                'public': item['public'],
+                'track_href': item['tracks']['href'],
+                'track_count': item['tracks']['total'], }
+        output.append(resp)
+
+    if json_data['next']:
+        return get_playlists(userid, json_data['next'], output)
+
+    return output

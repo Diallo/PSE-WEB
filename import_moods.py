@@ -1,9 +1,31 @@
+"""
+    import_moods.py
+    ~~~~~~~~~~~~
+    This file can be utilized to query the Influx database to get
+    songs and their Spotify parameters.
+
+    :copyright: 2019 Moodify (High-Mood)
+    :authors:
+           "Stan van den Broek",
+           "Mitchell van den Bulk",
+           "Mo Diallo",
+           "Arthur van Eeden",
+           "Elijah Erven",
+           "Henok Ghebrenigus",
+           "Jonas van der Ham",
+           "Mounir El Kirafi",
+           "Esmeralda Knaap",
+           "Youri Reijne",
+           "Siwa Sardjoemissier",
+           "Barry de Vries",
+           "Jelle Witsen Elias"
+"""
+
+from app import app
 from app import db
 from app.utils import influx
-from app import app
 from app.utils.models import Song, Songmood
 from moodanalysis.moodAnalysis import analyse_mood
-
 
 if __name__ == "__main__":
     client = influx.create_client(app.config['INFLUX_HOST'], app.config['INFLUX_PORT'])
@@ -34,15 +56,7 @@ if __name__ == "__main__":
             'tempo': f.tempo
         })
 
-    # for t in tracks:
-    #         if t['songid'] == '69QGRreL8XpWLoa0WMYOvm':
-    #                 print('found')
-    #         Song.create_if_not_exist(t)
     moods = analyse_mood(tracks)
-    # data_songids = [mood['songid'] for mood in moods]
-    # songs = db.session.query(Songmood).filter(Songmood.songid.in_((data_songids))).all()
-    # songids = [s.songid for s in songs]
-    # new_songs = list(set(data_songids) - set(songids))
 
     for data in moods:
         data['response_count'] = 0
