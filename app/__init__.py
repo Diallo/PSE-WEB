@@ -26,7 +26,6 @@ spotifysso = oauth.remote_app('spotify',
                                                               'playlist-modify-public',
                                                               'playlist-modify-private',
                                                               'user-library-read',
-                                                              'user-read-birthdate',
                                                               'user-read-private',
                                                               'user-read-currently-playing'
                                                               )
